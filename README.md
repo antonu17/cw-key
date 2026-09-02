@@ -1,5 +1,7 @@
 # DIY ESP32 CW trainer and iambic paddle
 
+![Handmade PCB iambic paddle](key/img07.jpeg)
+
 This repository starts with a breadboard CW keyer/trainer and a handmade dual
 paddle. The first firmware milestone generates correctly timed dits and dahs;
 decoding, training modes, menus, and non-blocking iambic A/B logic come next.
@@ -30,22 +32,20 @@ All grounds must be common.
 | Dit switch | NO | GPIO 9 |
 | Dah switch | COM | GND |
 | Dah switch | NO | GPIO 10 |
-| Passive piezo | + | GPIO 2 through 220 ohm-1 kOhm resistor |
+| Passive piezo | + | GPIO 0 through 100 ohm-1 kOhm resistor |
 | Passive piezo | - | GND |
 
 The paddle inputs use the ESP32's internal pull-ups, so an open switch reads
 HIGH and a pressed switch reads LOW. GPIO 10 is not a strapping pin, but GPIO 9
 is: do not hold the DIT paddle while resetting or powering on. The board's
-user/BOOT button will also act like DIT. GPIO 2 is used for the passive piezo so
+user/BOOT button will also act like DIT. GPIO 0 is used for the passive piezo so
 the sidetone does not illuminate the extremely bright onboard RGB LED on GPIO 4.
 
 GPIO 2, 8, and 9 are ESP32-C3 strapping pins. GPIO 9 is used here at the user's
 request and is also associated with the board's user/download-button circuitry.
-GPIO 2 drives only a passive piezo through a series resistor, which does not
-force a DC strap level during boot.
-Avoid GPIO 18/19 (native USB)
-and GPIO 20/21 (the onboard CH340 serial path). GPIO 0 and GPIO 18 are avoided
-as bare paddle inputs because the tested board produced false LOW readings.
+Avoid GPIO 18/19 (native USB) and GPIO 20/21 (the onboard CH340 serial path).
+GPIO 0 is suitable as a driven buzzer output even though it produced false LOW
+readings when previously tested as a bare paddle input.
 
 One channel of the onboard RGB LED on GPIO 4 follows the keyed sidetone using
 low-duty PWM. Its brightness is set by `STATUS_LED_DUTY` in `include/config.h`:

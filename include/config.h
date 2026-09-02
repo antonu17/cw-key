@@ -6,8 +6,7 @@
 constexpr int PIN_PADDLE_DIT = 9;
 constexpr int PIN_PADDLE_DAH = 10;
 // GPIO4 also drives one channel of the extremely bright onboard RGB LED.
-// GPIO2 avoids lighting it; a passive piezo through 1 kOhm does not impose a
-// DC strap level during boot.
+// The passive piezo was moved to GPIO0 so its tone does not drive that LED.
 constexpr int PIN_BUZZER = 0;
 constexpr int PIN_STATUS_LED = 4;
 constexpr int PIN_I2C_SDA = 6;
