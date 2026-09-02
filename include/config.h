@@ -49,7 +49,7 @@ constexpr char VBAND_WS_PROTOCOL[] = "lws-hrs-vband2";
 constexpr char VBAND_CLIENT_VERSION[] = "VB 2.0";
 // Credentials are provisioned at runtime over serial into NVS, never stored
 // in this file. Only the non-secret defaults live here.
-constexpr char DEFAULT_CHANNEL[] = "1";
+constexpr char DEFAULT_CHANNEL[] = "Channel 1";
 constexpr char DEFAULT_NAME[] = "CWKEY";
 constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS = 20000;
 

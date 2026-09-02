@@ -2,25 +2,24 @@
 
 ![Handmade PCB iambic paddle](key/img07.jpeg)
 
-This repository starts with a breadboard CW keyer/trainer and a handmade dual
-paddle. The first firmware milestone generates correctly timed dits and dahs;
-decoding, training modes, menus, and non-blocking iambic A/B logic come next.
+A homebrew Morse keyer built on an ESP32-C3 and a handmade dual paddle. It works
+as a standalone practice keyer with sidetone and an on-screen decoder, and it can
+also put you on [VBand](https://hamradio.solutions/vband/) — either through the
+browser over USB serial, or straight over WiFi with no computer at all.
 
-## Assumed prototype hardware
+## Hardware
 
 - Waveshare ESP-C3-32S-Kit (ESP32-C3, onboard CH340 USB-to-UART)
-- 0.96-inch 128x64 SSD1306 I2C OLED, normally address `0x3C`
+- 0.96-inch 128x64 SSD1306 I2C OLED, address `0x3C`
 - Passive piezo buzzer (not an active fixed-tone buzzer)
-- Two normally-open lever microswitches, such as Omron D2F/D2FC style
-- Two paddles, a rigid base, pivots, return magnets or springs, and adjustment screws
-- Breadboard, jumpers, and USB power
+- Two normally-open lever microswitches (Omron D2F/D2FC style)
+- Breadboard, jumpers, USB cable
 
-Check the exact ESP32 and OLED markings before applying power. The OLED must be
-3.3 V compatible. Do not connect an unknown 5 V I2C module directly to ESP32 pins.
+The OLED must be 3.3 V compatible. Check the markings before applying power.
 
-## Breadboard wiring
+## Wiring
 
-All grounds must be common.
+All grounds common.
 
 | Part | Terminal | ESP32 |
 |---|---|---|
@@ -32,121 +31,149 @@ All grounds must be common.
 | Dit switch | NO | GPIO 9 |
 | Dah switch | COM | GND |
 | Dah switch | NO | GPIO 10 |
-| Passive piezo | + | GPIO 0 through 100 ohm-1 kOhm resistor |
+| Passive piezo | + | GPIO 0 through 100 ohm - 1 kOhm resistor |
 | Passive piezo | - | GND |
 
-The paddle inputs use the ESP32's internal pull-ups, so an open switch reads
-HIGH and a pressed switch reads LOW. GPIO 10 is not a strapping pin, but GPIO 9
-is: do not hold the DIT paddle while resetting or powering on. The board's
-user/BOOT button will also act like DIT. GPIO 0 is used for the passive piezo so
-the sidetone does not illuminate the extremely bright onboard RGB LED on GPIO 4.
+Use `COM` and `NO`, not `NC` — confirm with a continuity meter, since terminal
+markings vary between switch families.
 
-GPIO 2, 8, and 9 are ESP32-C3 strapping pins. GPIO 9 is used here at the user's
-request and is also associated with the board's user/download-button circuitry.
-Avoid GPIO 18/19 (native USB) and GPIO 20/21 (the onboard CH340 serial path).
-GPIO 0 is suitable as a driven buzzer output even though it produced false LOW
-readings when previously tested as a bare paddle input.
+Paddle inputs use internal pull-ups: open reads HIGH, pressed reads LOW. If dit
+and dah come out swapped, change `PIN_PADDLE_DIT` / `PIN_PADDLE_DAH` in
+`include/config.h` instead of rewiring.
 
-One channel of the onboard RGB LED on GPIO 4 follows the keyed sidetone using
-low-duty PWM. Its brightness is set by `STATUS_LED_DUTY` in `include/config.h`:
-`0` is off and `255` is maximum. The default `13` is about five percent.
+**GPIO 9 is a strapping pin.** Don't hold the dit paddle while resetting or
+powering on, or the board drops into download mode. The onboard BOOT button sits
+on the same pin and will act like dit. Avoid GPIO 18/19 (native USB) and
+GPIO 20/21 (the CH340 serial path). The piezo is on GPIO 0 to keep the sidetone
+off GPIO 4, which drives the very bright onboard RGB LED — that LED now follows
+the key at low PWM duty, set by `STATUS_LED_DUTY`.
 
-For a small piezo disc, direct GPIO drive through a series resistor is suitable
-for the prototype. A magnetic/electromagnetic buzzer can draw too much current:
-drive it with an NPN transistor or logic-level MOSFET and add a flyback diode if
-the device is inductive. Never drive a speaker directly from the GPIO.
-
-## Paddle mechanical design
-
-Build the key as two independent levers mirrored around a 10-14 mm finger gap.
-A reliable first version is easier with each lever pivoting on an M3 shoulder
-screw or an M3 screw passing through a small ball bearing. A plain screw clamped
-through FR4 tends to bind and gives inconsistent return force.
-
-Suggested starting dimensions:
-
-- base: about 90 x 60 mm, heavy or clamped to the desk
-- lever: 70-90 mm long, 10-15 mm wide, 1.6-2.0 mm FR4
-- pivot-to-finger-pad distance: 50-65 mm
-- pivot-to-switch-contact distance: 12-20 mm
-- finger pads: 25-35 mm tall with rounded edges
-- movement at finger pad: adjustable around 0.5-1.0 mm
-- switch pre-travel: leave a small clearance; do not hold the plunger depressed
-
-FR4 is the forgiving prototype material: stiff, easy to drill, electrically
-insulating, and inexpensive. Wet-sand cut edges and avoid breathing fiberglass
-dust. Carbon fiber is conductive and its dust is hazardous; if used, isolate it
-from all electrical contacts and machine it with proper extraction and PPE.
-
-### One lever, from the side
-
-```text
- finger force ->
-       [pad]=================[pivot]---[adjust screw]
-                                  |          |
-                            return spring  switch lever
-                                               [COM/NO]
-```
-
-Mount each microswitch rigidly with its lever facing the paddle's adjustment
-screw. Put an M3 nylon-tipped screw and locknut in the paddle or a fixed bracket;
-use it to set contact spacing. Add a second stop screw so the microswitch itself
-does not absorb excessive finger force.
-
-### Return force options
-
-Use one method per paddle:
-
-1. **Opposing magnets (preferred):** one small magnet on the lever and one on an
-   adjustable fixed bracket, like poles facing. This is smooth and has no rubbing.
-2. **Extension spring:** connect a light spring close to the pivot and provide
-   several anchor holes. Moving the anchor changes force. Ensure it cannot pull
-   the lever sideways.
-3. **Torsion spring:** place it concentrically on the pivot. Compact, but the
-   pivot geometry and spring selection are less forgiving.
-
-The microswitch's own spring can return a very light lever, but relying on it
-usually produces uneven left/right feel. Set the independent return mechanism
-first, then adjust the screw until the switch actuates just before the hard stop.
-
-### Contact wiring and strain relief
-
-Use `COM` and `NO`, not `NC`. Confirm the terminals with a continuity meter;
-markings differ between switch families. Twist each signal wire with a ground
-wire, route both pairs away from the buzzer leads, and secure the cable to the
-base so movement never reaches a solder lug. A future detachable key can use a
-3.5 mm TRS jack: tip=dit, ring=dah, sleeve=ground (make this convention explicit
-on the enclosure).
+A small piezo disc can be driven straight from the GPIO through the series
+resistor. Anything inductive or higher-current needs a transistor and a flyback
+diode. Don't drive a speaker directly from a pin.
 
 ## Build and upload
-
-This project uses PlatformIO:
 
 ```sh
 pio run
 pio run --target upload
-pio device monitor
+pio device monitor        # 115200 baud
 ```
 
-If dit and dah are reversed, swap GPIO 9/10 in `include/config.h` rather than
-rewiring the key. At startup the OLED should show `READY`; holding a paddle emits
-repeated elements at 18 WPM. Squeezing both alternates dit and dah in this first,
-deliberately simple prototype.
+## Using it
+
+**As a standalone keyer.** Power it up and send. The top of the screen shows
+speed and status; received code fills the upper pane and your own sending the
+lower one, both decoded to text.
+
+**On VBand through the browser.** Open VBand in Chrome or Edge (Web Serial isn't
+in Firefox or Safari), go to Settings, click **Connect to CW Hotline** and pick
+the CH340 port. Close the serial monitor first — the browser and the monitor
+can't share the port. VBand deliberately doesn't sound your own serial-keyed
+code, so the sidetone here comes from your buzzer.
+
+**On VBand over WiFi, no computer.** Provision once over serial:
+
+```
+SSID your-network
+PASS your-password
+CHAN Channel 1
+SAVE
+```
+
+Credentials go into NVS and survive reboots and reflashes. They are never stored
+in the source tree — don't put them in `config.h`. You'll hear `OK` in Morse when
+WiFi connects, and the header will move through `CONN` → `WIFI` → `WS` → `LINK`.
+Once it says `LINK` you can unplug from the computer and run it on any USB power.
+
+Other serial commands: `SHOW` (config, with the password masked), `SCAN` (list
+2.4 GHz networks), `JOIN <channel>` (try a channel without saving), `NAME`,
+`DEBUG on|off` (log WebSocket frames), `CLEAR`, `HELP`.
+
+Channel names come from the server and are case-sensitive — `Practice Channel`,
+`Channel 1`, and so on. `DEBUG on` prints the list at connect time.
+
+The ESP32-C3 is **2.4 GHz only** and needs WPA2. If your phone hotspot won't
+connect, that's usually the cause: turn on "Maximize Compatibility" on iPhone, or
+pick the 2.4 GHz band on Android. On failure it beeps `NC` and prints a status
+code, then keeps working as an offline keyer.
+
+## Settings
+
+Everything lives in `include/config.h`:
+
+| Setting | Default | Notes |
+|---|---|---|
+| `DEFAULT_WPM` | 16 | keyer speed |
+| `SIDETONE_HZ` | 650 | your own sending |
+| `RX_SIDETONE_HZ` | 500 | received code, so you can tell them apart |
+| `IAMBIC_MODE_B` | true | false for mode A |
+| `STRAIGHT_KEY_MODE` | false | either lever keys directly, timing measured |
+| `ENABLE_SIDETONE` | true | |
+| `ENABLE_STATUS_LED` | true | |
+
+## How the VBand link works
+
+Worth writing down, because none of it is documented publicly and it was all
+read out of VBand's own JavaScript.
+
+VBand does **not** use keyboard emulation for hardware keys. Its adapter is a
+serial device, and both transports carry the same payload:
+
+```
+SM,<space_ms>,<mark_ms>
+```
+
+`space` is the silence before the mark, `mark` is the key-down time, both in
+milliseconds, both clamped to 3000 (which VBand also treats as its idle
+sentinel). So the device does its own timing and reports each finished element —
+that's why there's no latency and why the browser doesn't need focus.
+
+- **Serial:** Web Serial at 115200. The browser sends `VBand On` / `VBand Off`.
+- **WiFi:** `ws://hamradio.solutions:7385/`, subprotocol `lws-hrs-vband2`.
+  Announce with `CN,<name>,0,VB 2.0`, take your id from `COK`, `LU`+`JC` to join
+  a channel, then `SM` out and `SMK` in.
+
+Real CW Hotline units also link device-to-device through a vendor server that
+authenticates a per-device key, which a homebrew board can't join. Talking to
+VBand's own relay gets to the same place without it.
+
+## Decoding
+
+Two decoders, because the two directions are different problems.
+
+Your own sending needs no timing analysis — the keyer generated the elements, so
+it already knows each one is a dit or a dah.
+
+Received code is another operator's fist at their speed, so it's classified from
+measured durations. A whole character is buffered and split against its own
+shortest and longest mark; the speed estimate is tracked from intra-character
+spaces, which are exactly one unit by definition. An abrupt mid-stream speed
+change costs about one garbled character while it re-converges.
+
+## Status codes
+
+Beeped in Morse, the same convention CW Hotline uses:
+
+| Code | Meaning |
+|---|---|
+| `OK` | WiFi connected |
+| `NC` | WiFi failed; running offline |
+| `NET` | connection dropped, retrying |
+| `VB` / `VX` | entering / leaving VBand serial mode |
 
 ## Bring-up checklist
 
-1. With power disconnected, continuity-test each paddle from its GPIO wire to ground.
-2. Power only the ESP32 and verify serial output.
-3. Add the OLED and confirm its voltage, pin order, address, and `READY` screen.
-4. Add the piezo and briefly test the sidetone.
-5. Connect one switch at a time; verify dit, dah, then squeeze behavior.
-6. Adjust both paddles for equal force and travel only after electrical testing.
+1. With power off, continuity-test each paddle from its GPIO wire to ground.
+2. Power the ESP32 alone and check serial output.
+3. Add the OLED; confirm voltage, pin order, address, and that the screen draws.
+4. Add the piezo and test the sidetone briefly.
+5. Connect one switch at a time and verify dit, dah, then squeeze.
 
-## Planned firmware milestones
+## Still to do
 
-- Non-blocking keyer with debouncing and element memory
-- Selectable iambic mode A/B and paddle reversal
-- Morse character decoder with adaptive letter/word gaps
-- WPM and tone controls stored in nonvolatile settings
-- Koch/Farnsworth trainer, random groups, callsigns, and score history
-- Optional headphone/audio driver and rechargeable enclosure version
+- AP-mode captive portal for WiFi setup, instead of serial only
+- WPM and tone adjustment from the paddle, saved to NVS
+- Straight-key and iambic A/B selectable at runtime rather than compile time
+- Koch/Farnsworth trainer, random groups, callsigns, score history
+- Key-out line to drive a real transmitter
